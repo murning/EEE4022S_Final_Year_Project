@@ -1,18 +1,19 @@
+import codecs
+import json
+import sys
+
 import keras.backend as K
+import numpy as np
 from keras import layers
-from keras.layers import Activation, BatchNormalization, Conv1D, Dense, GlobalAveragePooling1D, Input, MaxPooling1D, \
-    Lambda
-from keras.models import Model
-from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 from keras import regularizers
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
+from keras.layers import GlobalAveragePooling1D, Input
 from keras.layers import Lambda
 from keras.layers.convolutional import Conv1D, MaxPooling1D
 from keras.layers.core import Activation, Dense
 from keras.layers.normalization import BatchNormalization
+from keras.models import Model
 from keras.models import Sequential
-import numpy as np
-import sys
-import json, codecs
 
 import constants
 
@@ -41,7 +42,7 @@ def load_hist(path):
 
 
 def m11_gcc(num_classes=constants.num_classes):
-    print('Using Model M11')
+    print('Using Model gcc cnn')
     m = Sequential()
     m.add(Conv1D(64,
                  input_shape=[GCC_LENGTH, 1],
@@ -106,7 +107,7 @@ def m11_gcc(num_classes=constants.num_classes):
 
 
 def m11_transfer_raw_audio(num_classes=constants.num_classes):
-    print('Using Model M11')
+    print('Using Model raw audio cnn')
     m = Sequential()
     m.add(Conv1D(64,
                  input_shape=[RAW_AUDIO_LENGTH, 1],
@@ -168,7 +169,7 @@ def m11_transfer_raw_audio(num_classes=constants.num_classes):
     return m
 
 
-def identity_block(input_tensor, kernel_size, filters, stage, block):
+def residual_block(input_tensor, kernel_size, filters, stage, block):
     conv_name_base = 'res' + str(stage) + str(block) + '_branch'
     bn_name_base = 'bn' + str(stage) + str(block) + '_branch'
 
@@ -193,8 +194,7 @@ def identity_block(input_tensor, kernel_size, filters, stage, block):
 
     # up-sample from the activation maps.
     # otherwise it's a mismatch. Recommendation of the authors.
-    # here we x2 the number of filters.
-    # See that as duplicating everything and concatenate them.
+
     if input_tensor.shape[2] != x.shape[2]:
         x = layers.add([x, Lambda(lambda y: K.repeat_elements(y, rep=2, axis=2))(input_tensor)])
     else:
@@ -220,22 +220,22 @@ def resnet_34_transfer(num_classes=constants.num_classes):
     x = MaxPooling1D(pool_size=4, strides=None)(x)
 
     for i in range(3):
-        x = identity_block(x, kernel_size=3, filters=48, stage=1, block=i)
+        x = residual_block(x, kernel_size=3, filters=48, stage=1, block=i)
 
     x = MaxPooling1D(pool_size=4, strides=None)(x)
 
     for i in range(4):
-        x = identity_block(x, kernel_size=3, filters=96, stage=2, block=i)
+        x = residual_block(x, kernel_size=3, filters=96, stage=2, block=i)
 
     x = MaxPooling1D(pool_size=4, strides=None)(x)
 
     for i in range(6):
-        x = identity_block(x, kernel_size=3, filters=192, stage=3, block=i)
+        x = residual_block(x, kernel_size=3, filters=192, stage=3, block=i)
 
     x = MaxPooling1D(pool_size=4, strides=None)(x)
 
     for i in range(3):
-        x = identity_block(x, kernel_size=3, filters=384, stage=4, block=i)
+        x = residual_block(x, kernel_size=3, filters=384, stage=4, block=i)
 
     x = GlobalAveragePooling1D()(x)
 
@@ -272,7 +272,7 @@ if __name__ == '__main__':
         model = m11_gcc(num_classes=num_classes)
 
     if model is None:
-        exit('Something went wrong!!')
+        exit('error! no model')
 
     model.compile(optimizer='adam',
                   loss='categorical_crossentropy',

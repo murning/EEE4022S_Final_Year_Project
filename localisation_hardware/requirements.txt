@@ -22,7 +22,7 @@ PyAudio==0.2.11
 pycparser==2.19
 python-dateutil==2.8.0
 pytz==2019.2
-PyYAML==5.1.2
+PyYAML==5.4
 resampy==0.2.2
 RPi.GPIO==0.7.0
 rpimotorlib==2.7
